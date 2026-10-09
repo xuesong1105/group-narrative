@@ -1,5 +1,6 @@
 import { motion, useScroll, useSpring } from 'motion/react'
 import { useEffect, useState } from 'react'
+import { useLedger } from '../ledger'
 import { rules } from '../rules'
 
 function useActiveChapter() {
@@ -33,6 +34,7 @@ export function Nav() {
   const { scrollYProgress } = useScroll()
   const scaleX = useSpring(scrollYProgress, { stiffness: 140, damping: 30 })
   const current = rules.find((r) => r.no === active)
+  const { nickname, setNickname, error } = useLedger()
 
   return (
     <>
@@ -42,6 +44,18 @@ export function Nav() {
             <span className="flex size-7 items-center justify-center rounded-md bg-seal text-sm text-gold">规</span>
             群规
           </a>
+          <label className="flex min-w-0 items-center gap-2 text-sm text-muted">
+            <span className="hidden shrink-0 sm:inline">我是</span>
+            <input
+              value={nickname}
+              maxLength={16}
+              placeholder="你的名字"
+              aria-label="你的名字，记入群账时使用"
+              onChange={(event) => setNickname(event.target.value)}
+              className="h-9 w-24 rounded-full border border-line bg-ink px-3 text-paper outline-none placeholder:text-faint focus:border-gold sm:w-32"
+            />
+            {error && <span className="hidden text-xs text-seal lg:inline">{error}</span>}
+          </label>
           <p className="text-sm text-muted" aria-live="polite">
             {current ? (
               <>

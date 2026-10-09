@@ -2,15 +2,26 @@
 
 一个叙事型单页网站：把群里的十二条群规写成一部可滚动阅读的「群聊编年史」。每一条群规是一个章节，配有原文、注解和一个可交互的小装置（拆红包、事变计时、揭晓倒计时、否定计算器、净网陪审席、随礼计算器等）。
 
-技术栈：Vite + React + TypeScript + Tailwind CSS v4 + Motion，图标使用 Phosphor。构建产物是纯静态文件，任何 Web 服务器都能托管。
+技术栈：Vite + React + TypeScript 做页面，Node.js 做接口，SQLite 把群账存在服务器上。红包、罚单、净网投票和随礼登记会写进数据库，换一台设备打开还在。顶栏要先填名字，再记账。
 
 ## 本地开发
 
-需要 Node.js 20+。
+需要 Node.js 22 或更高版本。一条命令会同时启动页面和接口。
 
 ```bash
 npm install
-npm run dev        # http://localhost:43127
+npm run dev
+```
+
+页面在 http://localhost:43127 ，接口在 http://localhost:43129 。开发时页面会把 `/api` 转到接口。
+
+数据库文件在 `data/qungui.sqlite`，已经加入忽略列表，不会提交进仓库。
+
+## 正式运行
+
+```bash
+npm run build
+npm start          # http://localhost:43129 ，同时提供页面和接口
 ```
 
 ## 修改内容
@@ -24,7 +35,7 @@ npm run dev        # http://localhost:43127
 
 ## 部署到阿里云（120.26.93.211）
 
-这台机器是 2 核 2G 的 Alibaba Cloud Linux 3。网站构建完是纯静态文件，服务器只需要 Nginx，不必在服务器上装 Node。2G 内存跑构建容易不够，所以在自己的电脑上构建，再把 `dist/` 传上去。
+这台机器是 2 核 2G 的 Alibaba Cloud Linux 3。页面和接口由同一个 Node 进程提供，Nginx 只负责把 80 端口转给它。服务器需要 Node.js 22。2G 内存不适合在机器上构建，在自己的电脑上构建后再上传。
 
 ### 1. 安全组放行 80 端口
 
@@ -38,71 +49,41 @@ npm run dev        # http://localhost:43127
 
 ### 2. 在你自己的电脑上构建
 
-需要已安装 Node.js 20 或更高版本。
+需要 Node.js 22。
 
 ```bash
 npm ci
 npm run build
 ```
 
-完成后当前目录下会出现 `dist/`，里面有 `index.html`。
+上传时要带上两个目录：`dist/`（页面）和 `server/`（接口）。只传 `dist/` 的话，群账接口不会出现。
 
 ### 3. 上传到服务器
 
-把 `dist` 里的文件传到服务器的 `/tmp/qungui-dist`。在你自己的电脑上执行（把密钥或密码登录方式换成你购买实例时设置的那种）：
-
 ```bash
-ssh root@120.26.93.211 "mkdir -p /tmp/qungui-dist"
-scp -r dist/. root@120.26.93.211:/tmp/qungui-dist/
+ssh root@120.26.93.211 "mkdir -p /opt/qungui"
+scp -r dist server root@120.26.93.211:/opt/qungui/
 ```
 
-Windows PowerShell 同样可以用这两条，前提是系统里有 OpenSSH。也可以用阿里云控制台的「远程连接 → 上传文件」，把 `dist` 里的内容放到 `/tmp/qungui-dist`。
+### 4. 在服务器上跑起来
 
-### 4. 在服务器上安装 Nginx 并挂上网站
-
-SSH 登录后：
+服务器上安装 Node.js 22 后：
 
 ```bash
-ssh root@120.26.93.211
+cd /opt/qungui
+PORT=43129 node --experimental-strip-types server/index.ts
 ```
 
-如果整个项目已经在服务器上，直接：
-
-```bash
-bash deploy/setup-aliyun.sh
-```
-
-如果服务器上只有刚传上去的页面，把下面整段贴进去执行：
-
-```bash
-dnf install -y nginx
-rm -rf /usr/share/nginx/html/*
-cp -a /tmp/qungui-dist/. /usr/share/nginx/html/
-systemctl enable --now nginx
-systemctl reload nginx
-firewall-cmd --permanent --add-service=http
-firewall-cmd --reload
-```
-
-`firewall-cmd` 如果提示找不到命令，说明没开 firewalld，跳过那两行即可。安全组才是阿里云上真正挡公网的那一层。
+Nginx 把 80 端口转到这个进程，配置见 `deploy/qungui.nginx.conf`。数据库会写在服务器的 `/opt/qungui/data/qungui.sqlite`。
 
 ### 5. 打开网站
 
-浏览器访问 [http://120.26.93.211](http://120.26.93.211)。
+浏览器访问 [http://120.26.93.211](http://120.26.93.211)。顶栏填上名字，拆一个红包，刷新页面，数字还在，就说明后端已经接上。
 
-以后改了文案或图片，在自己电脑上重新 `npm run build`，再执行一次第 3 步和第 4 步里的 `cp`，然后 `systemctl reload nginx`。
-
-构建使用相对路径（`base: './'`），页面放在子目录下也能打开。Docker 配置在仓库根目录的 `Dockerfile`，这台 2G 机器用上面的 Nginx 方式即可，不必再跑容器。
-
-### 本地预览构建产物
-
-```bash
-npm run build
-npm run preview    # http://localhost:43128
-```
+也可以用仓库根目录的 `Dockerfile` 构建镜像，容器对外端口是 43129。
 
 ## 说明
 
-- 「违规红包」的罚单计数保存在浏览器 localStorage 中，仅本机可见，不需要后端。
+- 你的名字保存在这台浏览器里。红包、罚单、投票和随礼保存在服务器的 SQLite 里，打开网站的人看到的是同一本账。
 - 已适配手机与桌面端，并遵循系统的「减少动态效果」设置。
 - 中文字体使用系统自带字体（苹方 / 微软雅黑 / 宋体），不加载大体积中文网络字体，国内访问更快。

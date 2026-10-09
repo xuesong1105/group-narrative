@@ -1,13 +1,17 @@
 import { ArrowCounterClockwise, Gavel, HandPalm, Heartbeat as HeartbeatIcon } from '@phosphor-icons/react'
 import { AnimatePresence, motion, useSpring, useTransform } from 'motion/react'
 import { useEffect, useState } from 'react'
+import { useLedger } from '../../ledger'
 import { Panel } from './Panel'
 
 const SEATS = 6
 const THRESHOLD = 3
 
 export function ExVote() {
-  const [votes, setVotes] = useState(0)
+  const { state, post, nickname } = useLedger()
+  const [note, setNote] = useState('')
+  const votes = state?.ex.count ?? 0
+  const voted = state?.ex.voters.includes(nickname.trim()) ?? false
   const guilty = votes > THRESHOLD
 
   return (
@@ -49,7 +53,10 @@ export function ExVote() {
               <Gavel size={32} className="shrink-0 text-seal" weight="duotone" />
               <div>
                 <p className="font-serif text-xl text-seal">判决生效：罚款 ¥1</p>
-                <p className="text-sm text-muted">{votes} 人认定该发言过于 EX，请当事人即刻发红包。</p>
+                <p className="text-sm text-muted">
+                  {votes} 人认定该发言过于 EX，请当事人即刻发红包。
+                  {state && state.ex.voters.length > 0 && <span className="mt-1 block">{state.ex.voters.join('、')}</span>}
+                </p>
               </div>
             </motion.div>
           ) : (
@@ -70,22 +77,31 @@ export function ExVote() {
       <div className="mt-6 flex flex-wrap gap-3">
         <button
           type="button"
-          disabled={votes >= SEATS}
-          onClick={() => setVotes((v) => Math.min(SEATS, v + 1))}
+          disabled={voted || votes >= SEATS}
+          onClick={() => {
+            void post('/api/ex/vote')
+              .then(() => setNote(''))
+              .catch((reason: unknown) => setNote(reason instanceof Error ? reason.message : '没有记上'))
+          }}
           className="inline-flex min-h-11 items-center gap-2 rounded-full bg-paper px-5 text-sm font-medium text-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <HandPalm size={18} weight="bold" />
-          我觉得 EX
+          {voted ? '你已举手' : '我觉得 EX'}
         </button>
         <button
           type="button"
           disabled={votes === 0}
-          onClick={() => setVotes(0)}
+          onClick={() => {
+            void post('/api/ex/reset')
+              .then(() => setNote('表决已清空'))
+              .catch((reason: unknown) => setNote(reason instanceof Error ? reason.message : '没有清掉'))
+          }}
           className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line px-5 text-sm text-muted transition-colors hover:border-paper/40 hover:text-paper disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ArrowCounterClockwise size={16} />
           重新表决
         </button>
+        {note && <p className="w-full text-sm text-gold">{note}</p>}
       </div>
     </Panel>
   )
@@ -103,9 +119,12 @@ function AnimatedNumber({ value }: { value: number }) {
 }
 
 export function Gift() {
+  const { state, post } = useLedger()
   const [amount, setAmount] = useState(520)
   const [people, setPeople] = useState(10)
+  const [note, setNote] = useState('')
   const total = amount * people
+  const booked = state?.gifts.total ?? 0
 
   return (
     <Panel label="随礼计算器">
@@ -156,6 +175,40 @@ export function Gift() {
           约等于 <span className="text-paper">{Math.floor(total / 50)}</span> 个恋爱红包，或{' '}
           <span className="text-paper">{total.toLocaleString('zh-CN')}</span> 次颜涩罚款。
         </p>
+      </div>
+
+      <div className="mt-6 border-t border-line pt-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs tracking-[0.25em] text-faint">已登记到群账</p>
+            <p className="mt-1 font-display text-3xl tabular-nums text-paper">
+              ¥{booked.toLocaleString('zh-CN')}
+              <span className="ml-2 text-base text-muted">{state?.gifts.people ?? 0} 人</span>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              void post('/api/gifts', { amount })
+                .then(() => setNote(`已记下你的 ¥${amount}`))
+                .catch((reason: unknown) => setNote(reason instanceof Error ? reason.message : '没有记上'))
+            }}
+            className="inline-flex min-h-11 items-center rounded-full bg-gold px-5 text-sm font-medium text-ink transition-opacity hover:opacity-90"
+          >
+            记下我的 ¥{amount}
+          </button>
+        </div>
+        {note && <p className="mt-3 text-sm text-gold">{note}</p>}
+        {state && state.gifts.pledges.length > 0 && (
+          <ul className="mt-4 divide-y divide-dashed divide-line text-sm">
+            {state.gifts.pledges.map((pledge) => (
+              <li key={pledge.nickname} className="flex justify-between py-2">
+                <span>{pledge.nickname}</span>
+                <span className="font-display tabular-nums text-gold">¥{pledge.amount}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </Panel>
   )

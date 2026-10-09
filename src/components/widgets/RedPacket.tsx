@@ -1,7 +1,7 @@
 import { ArrowCounterClockwise } from '@phosphor-icons/react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
-import { useLocalState } from '../../hooks'
+import { useLedger } from '../../ledger'
 import { Panel } from './Panel'
 
 function Packet({
@@ -83,10 +83,23 @@ function Packet({
 }
 
 export function LovePacket() {
+  const { state, post } = useLedger()
+  const [note, setNote] = useState('')
+  const loves = state?.packets.loves
+
   return (
-    <Panel label="红包 · 点击拆开">
+    <Panel label="红包 · 拆开就记入群账">
       <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-end">
-        <Packet amount={50} caption="恋爱红包" blessing="恭喜脱单，百年好合" />
+        <Packet
+          amount={50}
+          caption="恋爱红包"
+          blessing="恭喜脱单，百年好合"
+          onOpen={() => {
+            void post('/api/packets', { kind: 'love' })
+              .then(() => setNote('已记入群账'))
+              .catch((reason: unknown) => setNote(reason instanceof Error ? reason.message : '没有记上'))
+          }}
+        />
         <dl className="grid w-full grid-cols-2 gap-x-6 gap-y-4 text-sm sm:w-auto sm:grid-cols-1">
           <div>
             <dt className="text-faint">触发条件</dt>
@@ -97,12 +110,12 @@ export function LovePacket() {
             <dd className="mt-1 font-display text-2xl text-gold">¥50</dd>
           </div>
           <div>
-            <dt className="text-faint">收款方</dt>
-            <dd className="mt-1 text-paper">全体群成员</dd>
+            <dt className="text-faint">群里已记录</dt>
+            <dd className="mt-1 font-display text-2xl tabular-nums text-paper">{loves ?? '—'}</dd>
           </div>
           <div>
-            <dt className="text-faint">可否赖账</dt>
-            <dd className="mt-1 text-paper">不可</dd>
+            <dt className="text-faint">这一笔</dt>
+            <dd className="mt-1 text-paper">{note || '拆开后写入服务器'}</dd>
           </div>
         </dl>
       </div>
@@ -111,31 +124,42 @@ export function LovePacket() {
 }
 
 export function CleanPacket() {
-  const [count, setCount] = useLocalState('rule2-fines', 0)
+  const { state, post } = useLedger()
+  const [note, setNote] = useState('')
+  const count = state?.packets.fines ?? 0
 
   return (
-    <Panel label="罚款红包 · 每拆一次记一笔">
+    <Panel label="罚款红包 · 记在服务器上">
       <div className="flex flex-col items-center gap-8 sm:flex-row">
         <Packet
           small
           amount={1}
           caption="违规红包"
           blessing="下不为例"
-          onOpen={() => setCount((c) => c + 1)}
+          onOpen={() => {
+            void post('/api/packets', { kind: 'fine' })
+              .then(() => setNote('罚单已入账'))
+              .catch((reason: unknown) => setNote(reason instanceof Error ? reason.message : '没有记上'))
+          }}
         />
         <div className="w-full text-center sm:text-left">
-          <p className="text-sm text-faint">你在本设备上累计开出的罚单</p>
+          <p className="text-sm text-faint">全群累计罚单</p>
           <p className="mt-2 font-display text-6xl tabular-nums text-paper">
             <motion.span key={count} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-              {count}
+              {state ? count : '—'}
             </motion.span>
             <span className="ml-2 text-lg text-muted">张</span>
           </p>
           <p className="mt-1 text-sm text-muted">合计 ¥{count.toFixed(2)}，已充公</p>
+          {note && <p className="mt-2 text-sm text-gold">{note}</p>}
           {count > 0 && (
             <button
               type="button"
-              onClick={() => setCount(0)}
+              onClick={() => {
+                void post('/api/packets/reset-fines')
+                  .then(() => setNote('罚单已清零'))
+                  .catch((reason: unknown) => setNote(reason instanceof Error ? reason.message : '没有清掉'))
+              }}
               className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-sm text-muted transition-colors hover:border-paper/40 hover:text-paper"
             >
               <ArrowCounterClockwise size={16} />

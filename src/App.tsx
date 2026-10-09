@@ -1,4 +1,5 @@
 import { MotionConfig } from 'motion/react'
+import { LedgerProvider } from './ledger'
 import { Chapter } from './components/Chapter'
 import { Epilogue } from './components/Epilogue'
 import { Hero } from './components/Hero'
@@ -9,6 +10,7 @@ import { rules } from './rules'
 export default function App() {
   return (
     <MotionConfig reducedMotion="user">
+      <LedgerProvider>
       <div id="top" className="grain">
         <Nav />
         <main>
@@ -20,6 +22,7 @@ export default function App() {
         </main>
         <Epilogue />
       </div>
+      </LedgerProvider>
     </MotionConfig>
   )
 }
