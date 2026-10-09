@@ -1,5 +1,6 @@
 import { MapPin, Clock, Users } from '@phosphor-icons/react'
 import { motion } from 'motion/react'
+import portrait from '../../assets/wang-huanxiao.jpg'
 import { Panel } from './Panel'
 
 const QUOTE = '所以我们要实现共产主义'
@@ -48,32 +49,46 @@ export function Quote() {
 
 export function Debt() {
   const rows = [
-    ['债务人', '欢笑'],
+    ['债务人', '王欢笑'],
     ['债权人', '猫猫'],
     ['标的', '腿 × 1'],
     ['期限', '未约定'],
     ['利息', '按群规另计'],
   ]
   return (
-    <Panel label="借据 · No. 006">
-      <dl className="divide-y divide-dashed divide-line">
-        {rows.map(([k, v]) => (
-          <div key={k} className="flex items-baseline justify-between py-3.5">
-            <dt className="text-sm text-faint">{k}</dt>
-            <dd className="font-serif text-lg">{v}</dd>
-          </div>
-        ))}
-      </dl>
-      <motion.div
-        className="pointer-events-none absolute bottom-8 right-6 rounded-xl border-[3px] border-seal px-4 py-2 font-serif text-2xl font-bold tracking-widest text-seal sm:right-10"
-        initial={{ opacity: 0, scale: 2.2, rotate: -4 }}
-        whileInView={{ opacity: 0.9, scale: 1, rotate: -14 }}
-        viewport={{ once: true, amount: 0.7 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 16, delay: 0.4 }}
-      >
-        未偿还
-      </motion.div>
-    </Panel>
+    <div className="grid items-stretch gap-4 sm:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
+      <figure className="relative min-h-72 overflow-hidden rounded-3xl border border-line bg-ink-3">
+        <img
+          src={portrait}
+          alt="王欢笑，黑金队服，双臂交叉"
+          className="absolute inset-0 size-full object-cover object-[78%_22%]"
+        />
+        <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink via-ink/75 to-transparent px-5 pb-5 pt-16">
+          <p className="text-xs tracking-[0.3em] text-gold">债务人档案</p>
+          <p className="mt-1 font-serif text-2xl">王欢笑</p>
+          <p className="mt-0.5 text-sm text-muted">Wang Huanxiao · CS2 · 2025</p>
+        </figcaption>
+      </figure>
+      <Panel label="借据 · No. 006" className="h-full">
+        <dl className="divide-y divide-dashed divide-line pb-16">
+          {rows.map(([k, v]) => (
+            <div key={k} className="flex items-baseline justify-between py-3.5">
+              <dt className="text-sm text-faint">{k}</dt>
+              <dd className="font-serif text-lg">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <motion.div
+          className="pointer-events-none absolute bottom-8 right-6 rounded-xl border-[3px] border-seal px-4 py-2 font-serif text-2xl font-bold tracking-widest text-seal sm:right-10"
+          initial={{ opacity: 0, scale: 2.2, rotate: -4 }}
+          whileInView={{ opacity: 0.9, scale: 1, rotate: -14 }}
+          viewport={{ once: true, amount: 0.7 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 16, delay: 0.4 }}
+        >
+          未偿还
+        </motion.div>
+      </Panel>
+    </div>
   )
 }
 
