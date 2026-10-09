@@ -24,9 +24,7 @@ npm run dev        # http://localhost:43127
 
 ## 部署到阿里云（120.26.93.211）
 
-这台机器是 2 核 2G 的 Alibaba Cloud Linux 3。网站构建完是纯静态文件，服务器只需要 Nginx，不必在服务器上装 Node。2G 内存跑构建容易不够，所以在你自己的电脑上构建，再把 `dist/` 传上去。
-
-我没法登录你的服务器。下面的命令需要你自己在阿里云控制台和本机终端里执行。不要把 root 密码发到对话里。
+这台机器是 2 核 2G 的 Alibaba Cloud Linux 3。网站构建完是纯静态文件，服务器只需要 Nginx，不必在服务器上装 Node。2G 内存跑构建容易不够，所以在自己的电脑上构建，再把 `dist/` 传上去。
 
 ### 1. 安全组放行 80 端口
 
@@ -94,26 +92,7 @@ firewall-cmd --reload
 
 以后改了文案或图片，在自己电脑上重新 `npm run build`，再执行一次第 3 步和第 4 步里的 `cp`，然后 `systemctl reload nginx`。
 
-### 其他方式
-
-### 方式一：直接用 Nginx 托管静态文件
-
-```bash
-npm ci
-npm run build      # 产物在 dist/
-scp -r dist/* user@your-server:/var/www/qungui/
-```
-
-然后参考 `deploy/nginx.conf`，把 `root` 改成 `/var/www/qungui` 即可。构建使用相对路径（`base: './'`），放在子目录下（如 `https://example.com/qungui/`）也能正常访问。
-
-### 方式二：Docker
-
-```bash
-docker build -t qungui .
-docker run -d --name qungui -p 8088:80 --restart unless-stopped qungui
-```
-
-访问 `http://你的服务器IP:8088`。
+构建使用相对路径（`base: './'`），页面放在子目录下也能打开。Docker 配置在仓库根目录的 `Dockerfile`，这台 2G 机器用上面的 Nginx 方式即可，不必再跑容器。
 
 ### 本地预览构建产物
 
