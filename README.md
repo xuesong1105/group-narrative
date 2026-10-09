@@ -22,7 +22,79 @@ npm run dev        # http://localhost:43127
 
 每条群规的交互装置在 `src/components/widgets/` 下。
 
-## 部署到服务器
+## 部署到阿里云（120.26.93.211）
+
+这台机器是 2 核 2G 的 Alibaba Cloud Linux 3。网站构建完是纯静态文件，服务器只需要 Nginx，不必在服务器上装 Node。2G 内存跑构建容易不够，所以在你自己的电脑上构建，再把 `dist/` 传上去。
+
+我没法登录你的服务器。下面的命令需要你自己在阿里云控制台和本机终端里执行。不要把 root 密码发到对话里。
+
+### 1. 安全组放行 80 端口
+
+阿里云控制台 → 云服务器 ECS → 实例 → 这个实例 → 安全组 → 入方向 → 手动添加：
+
+- 协议：TCP
+- 端口：80
+- 授权对象：`0.0.0.0/0`
+
+22 端口保持只给你自己的 IP，不要对全世界开放。
+
+### 2. 在你自己的电脑上构建
+
+需要已安装 Node.js 20 或更高版本。
+
+```bash
+npm ci
+npm run build
+```
+
+完成后当前目录下会出现 `dist/`，里面有 `index.html`。
+
+### 3. 上传到服务器
+
+把 `dist` 里的文件传到服务器的 `/tmp/qungui-dist`。在你自己的电脑上执行（把密钥或密码登录方式换成你购买实例时设置的那种）：
+
+```bash
+ssh root@120.26.93.211 "mkdir -p /tmp/qungui-dist"
+scp -r dist/. root@120.26.93.211:/tmp/qungui-dist/
+```
+
+Windows PowerShell 同样可以用这两条，前提是系统里有 OpenSSH。也可以用阿里云控制台的「远程连接 → 上传文件」，把 `dist` 里的内容放到 `/tmp/qungui-dist`。
+
+### 4. 在服务器上安装 Nginx 并挂上网站
+
+SSH 登录后：
+
+```bash
+ssh root@120.26.93.211
+```
+
+如果整个项目已经在服务器上，直接：
+
+```bash
+bash deploy/setup-aliyun.sh
+```
+
+如果服务器上只有刚传上去的页面，把下面整段贴进去执行：
+
+```bash
+dnf install -y nginx
+rm -rf /usr/share/nginx/html/*
+cp -a /tmp/qungui-dist/. /usr/share/nginx/html/
+systemctl enable --now nginx
+systemctl reload nginx
+firewall-cmd --permanent --add-service=http
+firewall-cmd --reload
+```
+
+`firewall-cmd` 如果提示找不到命令，说明没开 firewalld，跳过那两行即可。安全组才是阿里云上真正挡公网的那一层。
+
+### 5. 打开网站
+
+浏览器访问 [http://120.26.93.211](http://120.26.93.211)。
+
+以后改了文案或图片，在自己电脑上重新 `npm run build`，再执行一次第 3 步和第 4 步里的 `cp`，然后 `systemctl reload nginx`。
+
+### 其他方式
 
 ### 方式一：直接用 Nginx 托管静态文件
 
